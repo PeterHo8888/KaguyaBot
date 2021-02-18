@@ -1,3 +1,5 @@
+const util = require('../util.js');
+
 module.exports = {
     name: 'stats',
     description: 'stats!',
@@ -12,9 +14,13 @@ module.exports = {
             if (!r[user.id]) {
                 msg.channel.send("No data for " + user.username);
             } else {
-                let data = JSON.stringify(r[user.id], null, 4);
+                let data = r[user.id];
+
                 let member = msg.guild.members.cache.get(user.id);
-                msg.channel.send(`"${member.displayName}": ${data}`);
+                let ret_embed = util.make_embed(member.displayName + "'s word counter");
+                for (word in data)
+                    ret_embed.addField(word, data[word]);
+                msg.channel.send(ret_embed);
             }
         });
     },
