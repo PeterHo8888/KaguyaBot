@@ -1,0 +1,6 @@
+token.json
+words.json
+node_modules/
+*.m4a
+*.mp3
+*.txt
