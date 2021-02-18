@@ -6,7 +6,7 @@ module.exports = {
     description: 'Play youtube link',
     execute(client, msg, args) {
         if (args.length == 0) {
-            msg.reply("format is:\n%play [youtube-url]");
+            msg.reply("format is:\n" + config.prefix + "play [youtube-url]");
             return;
         }
 

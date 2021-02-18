@@ -6,7 +6,7 @@ module.exports = {
     description: 'Set volume',
     execute(client, msg, args) {
         if (args.length == 0) {
-            msg.reply("format is:\n%vol [percent]");
+            msg.reply("format is:\n" + config.prefix + "vol [percent]");
             return;
         }
 

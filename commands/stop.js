@@ -9,7 +9,7 @@ module.exports = {
             msg.member.voice.channel.join().then(conn => {
                 if (conn.player.dispatcher) {
                     conn.player.dispatcher.destroy();
-                    msg.react('🛑');;
+                    msg.react('🛑');
                 }
             });
         }

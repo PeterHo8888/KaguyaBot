@@ -8,7 +8,6 @@ module.exports = {
         ret_embed.addField("Server name", msg.guild.name);
         ret_embed.addField("Server ID", msg.guild.id);
         ret_embed.addField("Total members", msg.guild.memberCount);
-
         msg.channel.send(ret_embed);
     },
 };
