@@ -6,7 +6,8 @@ module.exports = {
     description: 'Set volume',
     execute(client, msg, args) {
         if (args.length == 0) {
-            msg.reply("format is:\n" + config.prefix + "vol [percent]");
+            //msg.reply("format is:\n" + config.prefix + "vol [percent]");
+            msg.reply("current vol is: " + config["vol"] + "%");
             return;
         }
 
@@ -26,7 +27,6 @@ module.exports = {
                 }
             });
         }
-        msg.react('✅');;
-        //msg.reply("Set volume to " + config.vol + "%!");
+        msg.react('✅');
     },
 };
