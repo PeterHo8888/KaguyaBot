@@ -3,7 +3,7 @@ module.exports = {
     description: 'Remind Me!',
     async execute(client, msg, args) {
         if (args.length == 0) {
-            msg.reply("format is:\n!remind XX[smh] Text here");
+            msg.reply("format is:\n" + config.prefix + "remind XX[smh] Text here");
             return;
         }
 
