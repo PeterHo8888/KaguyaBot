@@ -7,7 +7,17 @@ async function play(conn, msg, args) {
         console.log("playing ram");
         file = "ram.m4a";
     } else {
-        file = await ytdl(args[0], { filter: 'audioonly' });
+        video_info = await ytdl.getInfo(args[0]);
+        if (video_info.videoDetails.isLiveContent) {
+            // Live video does not always have
+            // "highest" stream audio quality
+            file = await ytdl(args[0]);
+        } else {
+            file = await ytdl(args[0], {
+                filter: 'audioonly',
+                highWaterMark: 1 << 25
+            });
+        }
         console.log(args[0])
     }
 
