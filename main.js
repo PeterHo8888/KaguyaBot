@@ -79,9 +79,18 @@ client.on('message', async msg => {
             let msg_to_match = msg.content.toLowerCase();
             for (key in author_arr) {
                 if (author_arr.hasOwnProperty(key)) {
+                    // create regex with key but add slashes for '"\NUL
                     let escaped = (key + '').replace(/[\\"']/g, '\\$&').replace(/\u0000/g, '\\0');
                     let regex = new RegExp(escaped, 'ig');
                     let num_matches = (msg_to_match.match(regex) || []).length;
+
+                    // subtract out matches belonging to emotes
+                    let emote_escaped = "<:[^<:]*" + escaped + "[^:>]*:\\d+>";
+                    let emote_regex = new RegExp(emote_escaped, 'ig');
+                    let emote_num_matches = (msg_to_match.match(emote_regex) || []).length;
+
+                    num_matches -= emote_num_matches;
+
                     if (num_matches > 0) {
                         let val = author_arr[key] + num_matches;
                         author_arr[key] = val;
