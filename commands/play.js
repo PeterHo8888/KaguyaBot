@@ -42,46 +42,45 @@ async function push_dl_url(url, queue)
 }
 
 async function play(conn, msg, args) {
-    let file;
-    if (args[0] == "ram") {
-        console.log("playing ram");
-        file = "ram.m4a";
-    } else {
+    url = args[0];
 
-        try {
-            url = args[0];
+    if (url == "lofi")
+        url = "https://www.youtube.com/watch?v=5qap5aO4i9A";
 
-            // Three types: playlist, video, playlist+video
-            // Playlist+video should be treated as video (for now)
+    try {
+        console.log(args[0]);
 
-            if (ytdl.validateURL(url)) {
-                // Do nothing, process as a regular video
-                await push_dl_url(url, playlist_queue);
-                console.log(playlist_queue.length);
-            } else if (ytpl.validateID(url)) {
-                playlist = await ytpl(url);
+        // Three types: playlist, video, playlist+video
+        // Playlist+video should be treated as video (for now)
 
-                // Queue all videos
+        if (ytdl.validateURL(url)) {
+            // Do nothing, process as a regular video
+            // Definitely not thread-safe :')
+            playlist_queue = [];
+            await push_dl_url(url, playlist_queue);
+        } else if (ytpl.validateID(url)) {
+            playlist = await ytpl(url);
 
-                // Hack to at least queue 1
-                let queued = 0;
-                for (const item of playlist.items) {
-                    //console.log(item.shortUrl);
-                    if (queued === 0)
-                        await push_dl_url(item.shortUrl, playlist_queue);
-                    else
-                        push_dl_url(item.shortUrl, playlist_queue);
-                    ++queued;
-                };
-            }
-            console.log(args[0]);
-            play_queue(conn, msg, playlist_queue);
-        } catch (error) {
-            msg.reply(error.stack);
+            playlist_queue = [];
+            // Queue all videos
+
+            // Hack to at least queue 1
+            let queued = 0;
+            for (const item of playlist.items) {
+                // NOTE: This queues out-of-order without await
+                if (queued === 0)
+                    await push_dl_url(item.shortUrl, playlist_queue);
+                else
+                    push_dl_url(item.shortUrl, playlist_queue);
+                ++queued;
+            };
         }
+        play_queue(conn, msg, playlist_queue);
+    } catch (error) {
+        msg.reply(error.stack);
     }
-
 }
+
 module.exports = {
     name: 'play',
     description: 'Play youtube link',
