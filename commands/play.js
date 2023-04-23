@@ -2,10 +2,20 @@ const config = require('../config.json');
 const ytdl = require('ytdl-core');
 //const {getInfo} = require('ytdl-getinfo');
 const ytpl = require('ytpl');
+const {
+    NoSubscriberBehavior,
+    StreamType,
+    createAudioPlayer,
+    createAudioResource,
+    entersState,
+    AudioPlayerStatus,
+    VoiceConnectionStatus,
+    joinVoiceChannel,
+} = require('@discordjs/voice')
 
 var playlist_queue = require('../queue.js').play_queue;
 
-function play_queue(conn, msg, queue) {
+function play_queue_old(conn, msg, queue) {
     const dispatcher = conn.play(queue.shift());
     dispatcher.setVolumeLogarithmic(config["vol"] / 200.0);
     dispatcher.on('error', console.error);
@@ -19,6 +29,40 @@ function play_queue(conn, msg, queue) {
             play_queue(conn, msg, queue);
         }
     });
+}
+
+
+const player = createAudioPlayer();
+function play_queue(conn, msg, queue) {
+    const res = createAudioResource(queue.shift(), {
+        inputType: StreamType.Arbitrary,
+        inlineVolume: true,
+    });
+    player.play(res);
+    entersState(player, AudioPlayerStatus.Playing, 5000);
+
+    conn.subscribe(player);
+    player.on('subscribe', async () => {
+        //msg.react(':thumbsup:');
+        msg.react('✅');
+        //await msg.reply(`:thumbsup: Now Playing ***${video.title}***`);
+    });
+
+    /*
+    const dispatcher = conn.play(queue.shift());
+    dispatcher.setVolumeLogarithmic(config["vol"] / 200.0);
+    dispatcher.on('error', console.error);
+    dispatcher.on('start', () => {
+        msg.react('✅');
+    });
+    dispatcher.on('debug', console.debug);
+    dispatcher.on('finish', () => {
+        //msg.react('🛑');
+        if (queue.length != 0) {
+            play_queue(conn, msg, queue);
+        }
+    });
+    */
 }
 
 async function push_dl_url(url, queue)
@@ -90,12 +134,26 @@ module.exports = {
             return;
         }
 
-        if (msg.member.voice.channel) {
-            msg.member.voice.channel.join().then(conn => {
-                play(conn, msg, args);
+        voiceChannel = msg.member.voice.channel;
+        if (voiceChannel.joinable) {
+            const permissions = voiceChannel.permissionsFor(msg.client.user);
+            const conn = joinVoiceChannel({
+                channelId: msg.member.voice.channel.id,
+                guildId: msg.guild.id,
+                adapterCreator: msg.guild.voiceAdapterCreator
             });
+
+            try {
+                entersState(conn, VoiceConnectionStatus.Ready, 5_000);
+            } catch (error) {
+                connection.destroy();
+                throw error;
+            }
+
+            play(conn, msg, args);
+
         } else {
-            msg.reply("I need to know what voice channel!");
+            msg.reply("I can't join your voice channel!");
         }
     },
 };

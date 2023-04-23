@@ -5,7 +5,7 @@ function get_rand(sz) {
 }
 
 function make_embed(title, author = "KaguyaBot") {
-    const ret_embed = new Discord.MessageEmbed()
+    const ret_embed = new Discord.EmbedBuilder()
         .setColor(0x0099ff)
         .setTitle(title)
         .setTimestamp();
@@ -18,7 +18,7 @@ function make_embed(title, author = "KaguyaBot") {
         avatar = author.displayAvatarURL({format: "png", dynamic: true});
     }
 
-    ret_embed.setAuthor(name, avatar);
+    ret_embed.setAuthor({name: name, iconURL: avatar});
     ret_embed.setThumbnail(avatar);
     return ret_embed;
 }

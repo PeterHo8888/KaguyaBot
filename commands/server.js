@@ -5,9 +5,11 @@ module.exports = {
     description: 'Server Info',
     execute(client, msg, args) {
         let ret_embed = util.make_embed("Server Info");
-        ret_embed.addField("Server name", msg.guild.name);
-        ret_embed.addField("Server ID", msg.guild.id);
-        ret_embed.addField("Total members", msg.guild.memberCount);
-        msg.channel.send(ret_embed);
+        ret_embed.addFields(
+            {name: "Server name", value: msg.guild.name},
+            {name: "Server ID", value: msg.guild.id},
+            {name: "Total members", value: msg.guild.memberCount.toString()}
+        );
+        msg.channel.send({embeds: [ret_embed]});
     },
 };

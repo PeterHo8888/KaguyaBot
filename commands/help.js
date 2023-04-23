@@ -11,8 +11,8 @@ module.exports = {
         let ret_embed = util.make_embed("Command List");
 
         for (var [key, func] of commands.entries()) {
-            ret_embed.addField(config.prefix + key, func.description, false);
+            ret_embed.addFields({name: config.prefix + key, value: func.description, inline: false});
         }
-        msg.channel.send(ret_embed);
+        msg.channel.send({embeds: [ret_embed]});
     },
 };

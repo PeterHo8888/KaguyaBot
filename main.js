@@ -7,7 +7,24 @@ const util = require('./util.js');
 
 const words = require('./words.json');
 
-const client = new Discord.Client();
+//const client = new Discord.Client();
+
+const client = new Discord.Client({
+    intents: [
+        Discord.GatewayIntentBits.Guilds,
+        Discord.GatewayIntentBits.GuildMessages,
+        Discord.GatewayIntentBits.MessageContent,
+        Discord.GatewayIntentBits.GuildMembers,
+        Discord.GatewayIntentBits.GuildMessageReactions,
+        Discord.GatewayIntentBits.GuildVoiceStates
+    ],
+    presence: {
+        activities: [{
+            name: "reee",
+            type: Discord.ActivityType.Watching
+        }]
+    }
+});
 //client.on('debug', console.debug);
 client.commands = new Discord.Collection();
 
@@ -53,11 +70,26 @@ function debug() {
 client.once('ready', () => {
     update_commands();
     console.log('KaguyaBot is online!');
+    monitor_temp();
     //debug();
     //recursiveAsyncReadLine();
 });
 
-client.on('message', async msg => {
+client.on('messageDelete', async msg => {
+    try {
+        if (msg.author.username == "KaguyaBot") {
+            msg.channel.send("fuck you");
+            //msg.channel.send(msg.content + ", fuck you");
+        } else {
+            // Log all deleted messages
+            fs.appendFileSync("deleted.json", JSON.stringify(msg, null, 4));
+        }
+    } catch (error) {
+        console.error(error);
+    }
+});
+
+client.on('messageCreate', async msg => {
     try {
         if (msg.author.bot) {
             return;
@@ -107,6 +139,20 @@ client.on('message', async msg => {
         // Bail on no prefix
         if (!msg.content.startsWith(prefix))
             return;
+
+        if (util.get_rand(300) == 0) {
+            let member = msg.guild.members.cache.get(msg.author.id).displayName;
+            storage_channels = ["list of excludes"];
+            if (!storage_channels.some(v => msg.channel.name.includes(v))) {
+                // There's at least one
+                if (member == "<insert here>") {
+                    //const reactionEmoji = msg.guild.emojis.cache.find(emoji => emoji.name === 'thumbsdown');
+                    msg.react('👎');
+                } else {
+                    //console.log(member);
+                }
+            }
+        }
 
         // Split by whitespace, pop command
         const args = msg.content.slice(prefix.length).trim().split(/ +/);
@@ -172,3 +218,27 @@ function repeat_text(msg) {
         msg.channel.send(ret);
     }
 }
+
+function monitor_temp() {
+    (function set_temperature_status() {
+        try {
+            const {exec} = require('child_process');
+            exec('vcgencmd measure_temp', (err, stdout, stderr) => {
+                //client.user.setActivity(stdout, {type: "WATCHING"});
+                client.user.setPresence({
+                    activities: [{
+                        name: stdout,
+                        type: Discord.ActivityType.Watching
+                    }]
+                });
+            });
+            setTimeout(set_temperature_status, 10000);
+        } catch (error) {
+            console.error(error);
+        }
+    })();
+}
+
+process.on('unhandledRejection', error => {
+    console.error('Unhandled promise rejection:', error);
+});

@@ -19,8 +19,8 @@ module.exports = {
                 let member = msg.guild.members.cache.get(user.id);
                 let ret_embed = util.make_embed(member.displayName + "'s word counter", member.user);
                 for (word in data)
-                    ret_embed.addField(word, data[word]);
-                msg.channel.send(ret_embed);
+                    ret_embed.addFields({name: word, value: data[word].toString()});
+                msg.channel.send({embeds: [ret_embed]});
             }
         });
     },
