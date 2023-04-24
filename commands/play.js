@@ -13,59 +13,101 @@ const {
     joinVoiceChannel,
 } = require('@discordjs/voice')
 
-var playlist_queue = require('../queue.js').play_queue;
+//var playlist_queue = require('../queue.js').play_queue;
 
-function play_queue_old(conn, msg, queue) {
-    const dispatcher = conn.play(queue.shift());
-    dispatcher.setVolumeLogarithmic(config["vol"] / 200.0);
-    dispatcher.on('error', console.error);
-    dispatcher.on('start', () => {
-        msg.react('✅');
-    });
-    dispatcher.on('debug', console.debug);
-    dispatcher.on('finish', () => {
-        //msg.react('🛑');
-        if (queue.length != 0) {
-            play_queue(conn, msg, queue);
-        }
-    });
+function get_next_song() {
+    return global.playlist_queue.shift();
+}
+function get_queue_len() {
+    return global.playlist_queue.length;
+}
+function print_queue() {
+    for (const q of global.playlist_queue) {
+        console.log(`\t${q.url}`);
+    }
 }
 
+function setup_player(chan, bot_id) {
 
-const player = createAudioPlayer();
-function play_queue(conn, msg, queue) {
-    const res = createAudioResource(queue.shift(), {
-        inputType: StreamType.Arbitrary,
-        inlineVolume: true,
-    });
-    player.play(res);
-    entersState(player, AudioPlayerStatus.Playing, 5000);
+    if (global.player)
+        return global.player;
 
-    conn.subscribe(player);
-    player.on('subscribe', async () => {
-        //msg.react(':thumbsup:');
-        msg.react('✅');
+    global.player = createAudioPlayer();
+    global.player.on('subscribe', async () => {
+        //chan.send("INFO: Subscribed voice connection to player");
         //await msg.reply(`:thumbsup: Now Playing ***${video.title}***`);
     });
 
-    /*
-    const dispatcher = conn.play(queue.shift());
-    dispatcher.setVolumeLogarithmic(config["vol"] / 200.0);
-    dispatcher.on('error', console.error);
-    dispatcher.on('start', () => {
-        msg.react('✅');
-    });
-    dispatcher.on('debug', console.debug);
-    dispatcher.on('finish', () => {
-        //msg.react('🛑');
-        if (queue.length != 0) {
-            play_queue(conn, msg, queue);
+    player.addListener("stateChange", (oldOne, newOne) => {
+        console.log(`Audio player transitioned from ${oldOne.status} to ${newOne.status}`);
+
+        if (newOne.status == "playing") {
+            global.msg.react('✅');
+        }
+
+        if (get_queue_len() == 0) {
+            if (newOne.status == "idle" || newOne.status == "autopaused") {
+                const bot_reactions = msg.reactions.cache.filter(reaction => reaction.users.cache.has(bot_id));
+                try {
+                    for (const reaction of bot_reactions.values()) {
+                        reaction.users.remove(bot_id);
+                    }
+                } catch (error) {
+                    console.error('Failed to remove reactions.');
+                }
+                global.msg.react('🛑');
+            }
+        }
+
+        if (newOne.status == "idle" && oldOne.status == "playing") {
+            if (get_queue_len() != 0)
+                play_queue(player);
         }
     });
-    */
+
+    player.on('error', error => {
+        console.error(`Error: ${error.message} with resource ${error.resource.metadata.title}`);
+    });
+
+    return global.player;
 }
 
-async function push_dl_url(url, queue)
+function setup_subscription(conn, player) {
+    if (!global.subs)
+        global.subs = conn.subscribe(player);
+}
+
+async function play_queue(player) {
+    //print_queue();
+    if (get_queue_len() == 0)
+        return;
+
+    song = get_next_song();
+
+    console.log(song);
+
+    f = await dl_url(song);
+
+    if (!f) {
+        global.msg.reply(`Invalid URL found: ${song}`);
+        return play_queue(player);
+    }
+
+    global.audiores = createAudioResource(f, {
+        inputType: StreamType.Arbitrary,
+        inlineVolume: true,
+    });
+
+    global.audiores.volume.setVolume(config["vol"] / 100.0);
+
+    player.play(audiores);
+
+    //entersState(player, AudioPlayerStatus.Playing, 5000);
+
+
+}
+
+async function dl_url(url)
 {
     if (ytdl.validateURL(url)) {
         video_info = await ytdl.getInfo(url);
@@ -81,15 +123,22 @@ async function push_dl_url(url, queue)
                 highWaterMark: 1 << 25
             });
         }
-        queue.push(file);
+        return file;
     }
+    console.log(`Donewith ${url}`);
+    return null;
 }
 
-async function play(conn, msg, args) {
+async function play(player, msg, args) {
+    player.unpause();
+    player.stop();
+
     url = args[0];
 
     if (url == "lofi")
-        url = "https://www.youtube.com/watch?v=5qap5aO4i9A";
+        url = "https://www.youtube.com/watch?v=jfKfPfyJRdk";
+    //url = "https://www.youtube.com/watch?v=5qap5aO4i9A";
+    global.playlist_queue = [];
 
     try {
         console.log(args[0]);
@@ -100,26 +149,18 @@ async function play(conn, msg, args) {
         if (ytdl.validateURL(url)) {
             // Do nothing, process as a regular video
             // Definitely not thread-safe :')
-            playlist_queue = [];
-            await push_dl_url(url, playlist_queue);
+            global.playlist_queue.push(url);
         } else if (ytpl.validateID(url)) {
             playlist = await ytpl(url);
 
-            playlist_queue = [];
             // Queue all videos
-
-            // Hack to at least queue 1
-            let queued = 0;
             for (const item of playlist.items) {
-                // NOTE: This queues out-of-order without await
-                if (queued === 0)
-                    await push_dl_url(item.shortUrl, playlist_queue);
-                else
-                    push_dl_url(item.shortUrl, playlist_queue);
-                ++queued;
+                console.log(item.shortUrl);
+                global.playlist_queue.push(item.shortUrl)
             };
         }
-        play_queue(conn, msg, playlist_queue);
+        global.msg = msg;
+        play_queue(player, msg, global.playlist_queue);
     } catch (error) {
         msg.reply(error.stack);
     }
@@ -135,7 +176,7 @@ module.exports = {
         }
 
         voiceChannel = msg.member.voice.channel;
-        if (voiceChannel.joinable) {
+        if (voiceChannel && voiceChannel.joinable) {
             const permissions = voiceChannel.permissionsFor(msg.client.user);
             const conn = joinVoiceChannel({
                 channelId: msg.member.voice.channel.id,
@@ -145,12 +186,14 @@ module.exports = {
 
             try {
                 entersState(conn, VoiceConnectionStatus.Ready, 5_000);
+                player = setup_player(msg.channel, client.user.id);
+                setup_subscription(conn, player);
             } catch (error) {
-                connection.destroy();
+                conn.destroy();
                 throw error;
             }
 
-            play(conn, msg, args);
+            play(player, msg, args);
 
         } else {
             msg.reply("I can't join your voice channel!");

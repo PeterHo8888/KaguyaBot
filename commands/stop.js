@@ -1,17 +1,13 @@
-const config = require('../config.json');
-const fs = require('fs');
-
 module.exports = {
     name: 'stop',
     description: 'Stop playing',
     execute(client, msg, args) {
-        if (msg.member.voice.channel) {
-            msg.member.voice.channel.join().then(conn => {
-                if (conn.player.dispatcher) {
-                    conn.player.dispatcher.destroy();
-                    msg.react('🛑');
-                }
-            });
+        global.playlist_queue = [];
+        if (global.player) {
+            global.player.unpause();
+            global.player.stop();
+        } else {
+            msg.reply("Nothing is playing?");
         }
-    },
+    }
 };

@@ -20,6 +20,8 @@ module.exports = {
         config["vol"] = args[0];
         fs.writeFileSync("config.json", JSON.stringify(config, null, 4));
 
+        global.audiores.volume.setVolume(config["vol"] / 100.0);
+        /*
         if (msg.member.voice.channel) {
             msg.member.voice.channel.join().then(conn => {
                 if (conn.player.dispatcher) {
@@ -27,6 +29,7 @@ module.exports = {
                 }
             });
         }
+        */
         msg.react('✅');
     },
 };
